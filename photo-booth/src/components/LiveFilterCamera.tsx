@@ -4,9 +4,11 @@ import { Camera, RotateCcw, Zap, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { CountdownTimer } from './CountdownTimer';
+import { HorizontalFilterSelector } from './HorizontalFilterSelector';
 import { CapturedPhoto } from '../pages/Index';
+import { camanFilterManager } from '../lib/camanFilters';
 
-interface CameraViewProps {
+interface LiveFilterCameraProps {
   onPhotoCaptured: (photo: CapturedPhoto) => void;
   onComplete: () => void;
   photoCount: number;
@@ -20,7 +22,7 @@ interface CameraDevice {
 
 const TOTAL_PHOTOS = 3;
 
-export const CameraView: React.FC<CameraViewProps> = ({
+export const LiveFilterCamera: React.FC<LiveFilterCameraProps> = ({
   onPhotoCaptured,
   onComplete,
   photoCount
@@ -34,6 +36,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [selectedFilter, setSelectedFilter] = useState('none');
 
   useEffect(() => {
     enumerateCameras();
@@ -51,6 +54,16 @@ export const CameraView: React.FC<CameraViewProps> = ({
       }
     };
   }, [facingMode, selectedCameraId]);
+
+  // Apply live filter to video
+  useEffect(() => {
+    if (videoRef.current && selectedFilter !== 'none') {
+      const filterStyle = camanFilterManager.getBasicFilterStyle(selectedFilter);
+      videoRef.current.style.filter = filterStyle;
+    } else if (videoRef.current) {
+      videoRef.current.style.filter = 'none';
+    }
+  }, [selectedFilter]);
 
   const enumerateCameras = async () => {
     try {
@@ -87,7 +100,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
       setAvailableCameras(processedCameras);
       
-      // Set default to first available rear camera
       if (processedCameras.length > 0 && facingMode === 'environment') {
         setSelectedCameraId(processedCameras[0].deviceId);
       }
@@ -100,7 +112,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
     try {
       setCameraError(null);
       
-      // Stop current stream if exists
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -135,7 +146,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
     
-    // Reset camera selection when switching to rear cameras
     if (newFacingMode === 'environment' && availableCameras.length > 0) {
       setSelectedCameraId(availableCameras[0].deviceId);
     } else {
@@ -159,18 +169,20 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
     if (!ctx) return;
 
-    // Use the video's natural dimensions to preserve aspect ratio
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
     
-    // Set canvas to match video's natural dimensions exactly
     canvas.width = videoWidth;
     canvas.height = videoHeight;
 
-    // Clear canvas and prepare for drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Apply horizontal flip for front-facing camera (to match the preview)
+    // Apply the selected filter to the captured image
+    if (selectedFilter !== 'none') {
+      const filterStyle = camanFilterManager.getBasicFilterStyle(selectedFilter);
+      ctx.filter = filterStyle;
+    }
+    
     if (facingMode === 'user') {
       ctx.save();
       ctx.scale(-1, 1);
@@ -180,14 +192,15 @@ export const CameraView: React.FC<CameraViewProps> = ({
       ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
     }
 
-    // Convert to data URL
+    // Reset filter for next capture
+    ctx.filter = 'none';
+
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-    // Create photo object
     const photo: CapturedPhoto = {
       id: Date.now().toString(),
       dataUrl,
-      filter: 'none', // Will be applied later in FilterApplication
+      filter: selectedFilter,
       timestamp: Date.now()
     };
 
@@ -195,7 +208,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
     setIsCapturing(false);
     setShowCountdown(false);
 
-    // Check if we've captured all photos
     if (photoCount + 1 >= TOTAL_PHOTOS) {
       setTimeout(() => {
         onComplete();
@@ -221,36 +233,32 @@ export const CameraView: React.FC<CameraViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-black flex items-center justify-center">
-      {/* Camera feed container with portrait aspect ratio */}
-      <div className="relative w-4/5 max-w-sm aspect-[3/4] overflow-hidden rounded-lg">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ 
-            transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
-          }}
-        />
-        
-        {/* Grid lines overlay */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Vertical lines */}
-          <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/30"></div>
-          <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/30"></div>
-          {/* Horizontal lines */}
-          <div className="absolute top-1/3 left-0 right-0 h-px bg-white/30"></div>
-          <div className="absolute top-2/3 left-0 right-0 h-px bg-white/30"></div>
+    <div className="min-h-screen relative overflow-hidden bg-black flex flex-col">
+      {/* Camera feed container */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative w-4/5 max-w-sm aspect-[3/4] overflow-hidden rounded-lg">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover transition-all duration-300"
+            style={{ 
+              transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+            }}
+          />
+          
+          {/* Grid lines overlay */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/30"></div>
+            <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/30"></div>
+            <div className="absolute top-1/3 left-0 right-0 h-px bg-white/30"></div>
+            <div className="absolute top-2/3 left-0 right-0 h-px bg-white/30"></div>
+          </div>
         </div>
       </div>
 
-      {/* Hidden canvas for photo capture */}
       <canvas ref={canvasRef} className="hidden" />
-
-      {/* Camera overlay */}
-      <div className="camera-overlay" />
 
       {/* Top UI */}
       <motion.div
@@ -265,7 +273,6 @@ export const CameraView: React.FC<CameraViewProps> = ({
             </span>
           </div>
           
-          {/* Camera selector for rear cameras */}
           {facingMode === 'environment' && availableCameras.length > 1 && (
             <Select value={selectedCameraId} onValueChange={handleCameraChange}>
               <SelectTrigger className="glass-subtle border-white/20 text-white w-auto min-w-[100px]">
@@ -294,6 +301,22 @@ export const CameraView: React.FC<CameraViewProps> = ({
         >
           <RotateCcw className="w-5 h-5" />
         </Button>
+      </motion.div>
+
+      {/* Filter selector */}
+      <motion.div
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        className="absolute bottom-24 inset-x-0 px-4 z-20"
+      >
+        <div className="glass-subtle rounded-xl p-4">
+          <HorizontalFilterSelector
+            selectedFilter={selectedFilter}
+            onFilterChange={setSelectedFilter}
+            size="sm"
+            showLabel={false}
+          />
+        </div>
       </motion.div>
 
       {/* Capture controls */}

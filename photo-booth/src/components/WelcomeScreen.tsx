@@ -11,13 +11,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const features = [
     {
       icon: Camera,
-      title: "Capture",
-      description: "Take 3 amazing photos"
+      title: "Capture or Upload",
+      description: "Take photos or choose from gallery"
     },
     {
       icon: Sparkles,
-      title: "Filter",
-      description: "Apply beautiful effects"
+      title: "Arrange & Filter",
+      description: "Reorder and apply effects"
     },
     {
       icon: Image,
@@ -115,7 +115,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             className="w-full btn-touch bg-gradient-primary hover:opacity-90 glow-primary text-white font-semibold"
           >
             <Camera className="w-5 h-5 mr-2" />
-            Start Boothly
+            Get Started
           </Button>
         </motion.div>
 

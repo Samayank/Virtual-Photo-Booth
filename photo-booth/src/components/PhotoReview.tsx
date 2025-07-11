@@ -28,7 +28,10 @@ export const PhotoReview: React.FC<PhotoReviewProps> = ({
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold mb-2">Review Your Photos</h2>
           <p className="text-muted-foreground">
-            Look good? Let's create your photo strip!
+            {photos.length < 3 
+              ? `You have ${photos.length} photo${photos.length !== 1 ? 's' : ''}. Add ${3 - photos.length} more or continue.`
+              : 'Perfect! Ready to arrange them?'
+            }
           </p>
         </div>
 
@@ -80,7 +83,7 @@ export const PhotoReview: React.FC<PhotoReviewProps> = ({
             disabled={photos.length === 0}
           >
             <ArrowRight className="w-5 h-5 mr-2" />
-            Create Photo Strip
+            {photos.length >= 3 ? 'Arrange Photos' : 'Continue'}
           </Button>
           
           <Button
@@ -89,7 +92,7 @@ export const PhotoReview: React.FC<PhotoReviewProps> = ({
             className="w-full btn-touch"
           >
             <RotateCcw className="w-5 h-5 mr-2" />
-            Retake Photos
+            Add More Photos
           </Button>
         </div>
 

@@ -8,11 +8,12 @@ interface FilterSelectorProps {
 
 const filters = [
   { id: 'none', name: 'Original', preview: 'bg-gradient-primary' },
-  { id: 'sepia', name: 'Sepia', preview: 'bg-filter-retro' },
-  { id: 'grayscale', name: 'B&W', preview: 'bg-muted' },
-  { id: 'vintage', name: 'Vintage', preview: 'bg-filter-vintage' },
-  { id: 'cool', name: 'Cool', preview: 'bg-filter-cool' },
-  { id: 'warm', name: 'Warm', preview: 'bg-filter-warm' }
+  { id: 'vintage', name: 'Vintage', preview: 'bg-gradient-to-br from-amber-600 to-orange-700' },
+  { id: 'lomo', name: 'Lomo', preview: 'bg-gradient-to-br from-pink-500 to-purple-600' },
+  { id: 'clarity', name: 'Clarity', preview: 'bg-gradient-to-br from-blue-500 to-cyan-400' },
+  { id: 'sunrise', name: 'Sunrise', preview: 'bg-gradient-to-br from-yellow-400 to-red-500' },
+  { id: 'crossProcess', name: 'Cross', preview: 'bg-gradient-to-br from-green-400 to-teal-600' },
+  { id: 'orangePeel', name: 'Orange', preview: 'bg-gradient-to-br from-orange-400 to-red-600' }
 ];
 
 export const FilterSelector: React.FC<FilterSelectorProps> = ({
