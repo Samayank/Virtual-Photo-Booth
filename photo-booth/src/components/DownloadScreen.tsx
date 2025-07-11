@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Download, RotateCcw, Sparkles } from 'lucide-react';
+import { Download, RotateCcw, Share, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface DownloadScreenProps {
@@ -19,7 +19,46 @@ export const DownloadScreen: React.FC<DownloadScreenProps> = ({
     link.click();
   };
 
-  // Removed shareImage and related logic
+  const shareImage = async () => {
+    console.log('Share button clicked');
+    try {
+      // Convert data URL to blob
+      const response = await fetch(stripDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'photo-strip.jpg', { type: 'image/jpeg' });
+
+      console.log('Navigator share available:', !!navigator.share);
+      console.log('Can share files:', navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+
+      // Try native share first (but only if it can handle files)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        console.log('Using native share');
+        await navigator.share({
+          title: 'My Photo Strip',
+          text: `Check out my awesome photo strip! Create your own at ${window.location.origin}`,
+          files: [file]
+        });
+      } else {
+        console.log('Using WhatsApp fallback');
+        // Fallback to WhatsApp with link only (since we can't share images directly)
+        const whatsappText = encodeURIComponent(`Check out my awesome photo strip! 🎉 Create your own at ${window.location.origin}`);
+        
+        // Open WhatsApp with the message
+        const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+        window.open(whatsappUrl, '_blank');
+        
+        // Also download the image so user can manually share it
+        downloadImage();
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to WhatsApp with just text and download
+      const whatsappText = encodeURIComponent(`Check out my awesome photo strip! 🎉 Create your own at ${window.location.origin}`);
+      const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+      window.open(whatsappUrl, '_blank');
+      downloadImage();
+    }
+  };
 
   return (
     <div className="min-h-screen p-6 flex flex-col items-center justify-center">
@@ -56,7 +95,7 @@ export const DownloadScreen: React.FC<DownloadScreenProps> = ({
           transition={{ delay: 0.5 }}
           className="text-muted-foreground mb-8"
         >
-          Download your amazing creation
+          Download or share your amazing creation
         </motion.p>
 
         {/* Photo strip preview */}
@@ -90,7 +129,14 @@ export const DownloadScreen: React.FC<DownloadScreenProps> = ({
             Download Photo Strip
           </Button>
 
-          {/* Removed Share button */}
+          <Button
+            onClick={shareImage}
+            variant="outline"
+            className="w-full btn-touch"
+          >
+            <Share className="w-5 h-5 mr-2" />
+            Share
+          </Button>
 
           <Button
             onClick={onRestart}
@@ -119,7 +165,7 @@ export const DownloadScreen: React.FC<DownloadScreenProps> = ({
           transition={{ delay: 1.2 }}
           className="text-xs text-muted-foreground mt-6"
         >
-          🎉 Thanks for using Photo Booth!
+          🎉 Thanks for using Photo Booth! Share with friends!
         </motion.p>
       </motion.div>
     </div>

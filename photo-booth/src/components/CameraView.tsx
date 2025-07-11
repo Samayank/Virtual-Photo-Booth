@@ -193,7 +193,7 @@ export const CameraView: React.FC<CameraViewProps> = ({
         autoPlay
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain"
         style={{ 
           filter: getFilterStyle(selectedFilter),
           transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'

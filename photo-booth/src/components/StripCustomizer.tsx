@@ -104,13 +104,7 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
       ctx.font = '16px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('PHOTO BOOTH', canvas.width / 2, textY);
-      // Format date as DD/MM/YYYY
-      const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = now.getFullYear();
-      const formattedDate = `${day}/${month}/${year}`;
-      ctx.fillText(formattedDate, canvas.width / 2, textY + 25);
+      ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
     } else if (selectedLayout === 'horizontal') {
       // Horizontal layout - photos side by side
       const padding = 40;
