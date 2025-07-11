@@ -43,26 +43,7 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set dimensions based on layout
-    if (selectedLayout === 'vertical') {
-      canvas.width = 400;
-      canvas.height = 1200;
-    } else if (selectedLayout === 'horizontal') {
-      canvas.width = 1200;
-      canvas.height = 400;
-    } else { // grid
-      canvas.width = 800;
-      canvas.height = 800;
-    }
-
-    // Get background color
-    const bgColor = backgroundColors.find(bg => bg.id === selectedBackground)?.color || '#ffffff';
-    
-    // Fill background
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Load and draw photos
+    // Load images first to get their natural dimensions
     const imagePromises = photos.map(photo => {
       return new Promise<HTMLImageElement>((resolve) => {
         const img = new Image();
@@ -72,87 +53,148 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
     });
 
     const images = await Promise.all(imagePromises);
+    if (images.length === 0) return;
 
+    // Calculate canvas dimensions based on original image aspect ratios
+    const firstImage = images[0];
+    const imageAspectRatio = firstImage.width / firstImage.height;
+    
+    // Set canvas dimensions based on layout and preserve aspect ratios
     if (selectedLayout === 'vertical') {
-      // Classic vertical photo strip layout
+      // Vertical layout: stack images preserving their aspect ratio
+      const stripWidth = 400;
+      const imageWidth = stripWidth - 80; // padding
+      const imageHeight = imageWidth / imageAspectRatio;
       const padding = 40;
-      const photoWidth = canvas.width - (padding * 2);
-      const photoHeight = 240;
-      const photoSpacing = 30;
-      const startY = 50;
+      const spacing = 30;
+      const textHeight = 80;
+      
+      canvas.width = stripWidth;
+      canvas.height = padding + (images.length * imageHeight) + ((images.length - 1) * spacing) + textHeight + padding;
+    } else if (selectedLayout === 'horizontal') {
+      // Horizontal layout: place images side by side
+      const stripHeight = 400;
+      const imageHeight = stripHeight - 80; // padding
+      const imageWidth = imageHeight * imageAspectRatio;
+      const padding = 40;
+      const spacing = 30;
+      
+      canvas.width = padding + (images.length * imageWidth) + ((images.length - 1) * spacing) + padding;
+      canvas.height = stripHeight;
+    } else { // grid
+      const stripSize = 800;
+      const padding = 40;
+      const spacing = 30;
+      const imageSize = (stripSize - (padding * 2) - spacing) / 2;
+      
+      canvas.width = stripSize;
+      canvas.height = stripSize;
+    }
+
+    // Get background color
+    const bgColor = backgroundColors.find(bg => bg.id === selectedBackground)?.color || '#ffffff';
+    
+    // Fill background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw photos based on layout preserving aspect ratios
+    if (selectedLayout === 'vertical') {
+      // Vertical layout: stack images preserving their aspect ratio
+      const padding = 40;
+      const imageWidth = canvas.width - (padding * 2);
+      const imageAspectRatio = images[0].width / images[0].height;
+      const imageHeight = imageWidth / imageAspectRatio;
+      const spacing = 30;
 
       // Draw photos with white borders
       images.forEach((img, index) => {
-        const y = startY + index * (photoHeight + photoSpacing);
+        const y = padding + index * (imageHeight + spacing);
         
         // Draw white border/frame
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(padding - 10, y - 10, photoWidth + 20, photoHeight + 20);
+        ctx.fillRect(padding - 10, y - 10, imageWidth + 20, imageHeight + 20);
         
-        // Draw photo
-        ctx.drawImage(img, padding, y, photoWidth, photoHeight);
+        // Draw photo at original aspect ratio
+        ctx.drawImage(img, padding, y, imageWidth, imageHeight);
         
         // Add subtle inner border
         ctx.strokeStyle = '#e5e5e5';
         ctx.lineWidth = 1;
-        ctx.strokeRect(padding, y, photoWidth, photoHeight);
+        ctx.strokeRect(padding, y, imageWidth, imageHeight);
       });
 
       // Add text at bottom
-      const textY = startY + 3 * (photoHeight + photoSpacing) + 40;
+      const textY = canvas.height - 50;
       ctx.fillStyle = selectedBackground === 'white' ? '#666666' : '#ffffff';
       ctx.font = '16px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('BOOTHLY', canvas.width / 2, textY);
       ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
     } else if (selectedLayout === 'horizontal') {
-      // Horizontal layout - photos side by side
+      // Horizontal layout: place images side by side preserving aspect ratio
       const padding = 40;
-      const photoWidth = (canvas.width - (padding * 2) - (30 * 3)) / 4;
-      const photoHeight = canvas.height - (padding * 2);
-      const startX = padding;
+      const imageHeight = canvas.height - (padding * 2);
+      const imageAspectRatio = images[0].width / images[0].height;
+      const imageWidth = imageHeight * imageAspectRatio;
+      const spacing = 30;
 
       images.forEach((img, index) => {
-        const x = startX + index * (photoWidth + 30);
+        const x = padding + index * (imageWidth + spacing);
         
         // Draw white border/frame
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x - 10, padding - 10, photoWidth + 20, photoHeight + 20);
+        ctx.fillRect(x - 10, padding - 10, imageWidth + 20, imageHeight + 20);
         
-        // Draw photo
-        ctx.drawImage(img, x, padding, photoWidth, photoHeight);
+        // Draw photo at original aspect ratio
+        ctx.drawImage(img, x, padding, imageWidth, imageHeight);
         
         // Add subtle inner border
         ctx.strokeStyle = '#e5e5e5';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x, padding, photoWidth, photoHeight);
+        ctx.strokeRect(x, padding, imageWidth, imageHeight);
       });
     } else {
-      // Grid layout - 2x2
+      // Grid layout - preserve aspect ratio with object-fit contain behavior
       const padding = 40;
-      const photoSize = (canvas.width - (padding * 2) - 30) / 2;
+      const spacing = 30;
+      const cellSize = (canvas.width - (padding * 2) - spacing) / 2;
       const positions = [
         { x: padding, y: padding },
-        { x: padding + photoSize + 30, y: padding },
-        { x: padding, y: padding + photoSize + 30 },
-        { x: padding + photoSize + 30, y: padding + photoSize + 30 }
+        { x: padding + cellSize + spacing, y: padding },
+        { x: padding, y: padding + cellSize + spacing },
+        { x: padding + cellSize + spacing, y: padding + cellSize + spacing }
       ];
 
       images.forEach((img, index) => {
         if (index < 4) {
           const pos = positions[index];
           
+          // Calculate dimensions to fit image in cell while preserving aspect ratio
+          const imageAspectRatio = img.width / img.height;
+          let drawWidth = cellSize;
+          let drawHeight = cellSize / imageAspectRatio;
+          
+          if (drawHeight > cellSize) {
+            drawHeight = cellSize;
+            drawWidth = cellSize * imageAspectRatio;
+          }
+          
+          // Center the image in the cell
+          const offsetX = (cellSize - drawWidth) / 2;
+          const offsetY = (cellSize - drawHeight) / 2;
+          
           // Draw white border/frame
           ctx.fillStyle = '#ffffff';
-          ctx.fillRect(pos.x - 10, pos.y - 10, photoSize + 20, photoSize + 20);
+          ctx.fillRect(pos.x - 10, pos.y - 10, cellSize + 20, cellSize + 20);
           
-          // Draw photo
-          ctx.drawImage(img, pos.x, pos.y, photoSize, photoSize);
+          // Draw photo centered and aspect-ratio preserved
+          ctx.drawImage(img, pos.x + offsetX, pos.y + offsetY, drawWidth, drawHeight);
           
           // Add subtle inner border
           ctx.strokeStyle = '#e5e5e5';
           ctx.lineWidth = 1;
-          ctx.strokeRect(pos.x, pos.y, photoSize, photoSize);
+          ctx.strokeRect(pos.x, pos.y, cellSize, cellSize);
         }
       });
     }

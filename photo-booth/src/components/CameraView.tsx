@@ -161,12 +161,26 @@ export const CameraView: React.FC<CameraViewProps> = ({
 
     if (!ctx) return;
 
-    // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Use the video's natural dimensions to preserve aspect ratio
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    
+    // Set canvas to match video's natural dimensions exactly
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
 
-    // Draw video frame to canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Clear canvas and prepare for drawing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Apply horizontal flip for front-facing camera (to match the preview)
+    if (facingMode === 'user') {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+    }
 
     // Apply filter if selected
     if (selectedFilter !== 'none') {
