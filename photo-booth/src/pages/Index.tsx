@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WelcomeScreen } from '../components/WelcomeScreen';
 import { CameraView } from '../components/CameraView';
@@ -25,6 +25,74 @@ const Index = () => {
   const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
   const [finalStrip, setFinalStrip] = useState<string | null>(null);
   const [userChoice, setUserChoice] = useState<'camera' | 'upload' | null>(null);
+  const [navigationHistory, setNavigationHistory] = useState<AppStep[]>(['welcome']);
+
+  // Initialize history state on mount
+  useEffect(() => {
+    // Set initial history state
+    if (typeof window !== 'undefined') {
+      history.replaceState({ step: 'welcome', historyIndex: 0 }, '', window.location.pathname);
+    }
+  }, []);
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.step) {
+        const targetStep = event.state.step as AppStep;
+        const historyIndex = event.state.historyIndex || 0;
+        
+        // Update current step without pushing new history
+        setCurrentStep(targetStep);
+        setNavigationHistory(prev => prev.slice(0, historyIndex + 1));
+      } else {
+        // Handle case where user is on first page and presses back
+        if (currentStep === 'welcome') {
+          const shouldExit = confirm("Do you want to exit the photo booth?");
+          if (shouldExit) {
+            window.close();
+          } else {
+            // Push current state back to prevent navigation
+            history.pushState({ step: currentStep, historyIndex: 0 }, '', window.location.pathname);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentStep]);
+
+  const navigateToStep = (step: AppStep) => {
+    // Update navigation history
+    const newHistory = [...navigationHistory, step];
+    setNavigationHistory(newHistory);
+    
+    // Push new state to browser history
+    if (typeof window !== 'undefined') {
+      history.pushState(
+        { step, historyIndex: newHistory.length - 1 }, 
+        '', 
+        window.location.pathname
+      );
+    }
+    
+    setCurrentStep(step);
+  };
+
+  const goBack = () => {
+    if (navigationHistory.length > 1) {
+      const newHistory = navigationHistory.slice(0, -1);
+      const previousStep = newHistory[newHistory.length - 1];
+      setNavigationHistory(newHistory);
+      setCurrentStep(previousStep);
+      
+      // Update browser history
+      if (typeof window !== 'undefined') {
+        history.back();
+      }
+    }
+  };
 
   const nextStep = () => {
     const steps: AppStep[] = ['welcome', 'upload', 'camera', 'review', 'reorder', 'reorderAndFilter', 'filters', 'customize', 'download'];
@@ -43,6 +111,12 @@ const Index = () => {
     setFinalStrip(null);
     setCurrentStep('welcome');
     setUserChoice(null);
+    setNavigationHistory(['welcome']);
+    
+    // Reset browser history to initial state
+    if (typeof window !== 'undefined') {
+      history.replaceState({ step: 'welcome', historyIndex: 0 }, '', window.location.pathname);
+    }
   };
 
   const addPhoto = (photo: CapturedPhoto) => {
@@ -65,23 +139,23 @@ const Index = () => {
     addPhotos(photos);
     setUserChoice('upload');
     if (capturedPhotos.length + photos.length >= 3) {
-      setCurrentStep('review');
+      navigateToStep('review');
     }
   };
 
   const handleCameraChoice = () => {
     setUserChoice('camera');
-    setCurrentStep('camera');
+    navigateToStep('camera');
   };
 
   const handleCameraComplete = () => {
     // For camera photos, go directly to reorder (filters already applied)
-    setCurrentStep('reorder');
+    navigateToStep('reorder');
   };
 
   const handleReviewComplete = () => {
     // Both camera and upload photos go directly to reorder (no filters for uploads)
-    setCurrentStep('reorder');
+    navigateToStep('reorder');
   };
 
   const stepVariants = {
@@ -102,7 +176,7 @@ const Index = () => {
             exit="exit"
             transition={{ duration: 0.3 }}
           >
-            <WelcomeScreen onStart={() => setCurrentStep('upload')} />
+            <WelcomeScreen onStart={() => navigateToStep('upload')} />
           </motion.div>
         )}
 
@@ -151,7 +225,7 @@ const Index = () => {
           >
             <PhotoReview
               photos={capturedPhotos}
-              onRetake={() => setCurrentStep('upload')}
+              onRetake={() => navigateToStep('upload')}
               onContinue={handleReviewComplete}
               onRemovePhoto={removePhoto}
             />
@@ -170,8 +244,8 @@ const Index = () => {
             <PhotoReorder
               photos={capturedPhotos}
               onReorder={reorderPhotos}
-              onContinue={() => setCurrentStep('customize')}
-              onBack={() => setCurrentStep('review')}
+              onContinue={() => navigateToStep('customize')}
+              onBack={goBack}
             />
           </motion.div>
         )}
@@ -189,9 +263,9 @@ const Index = () => {
               photos={capturedPhotos}
               onComplete={(reorderedAndFilteredPhotos) => {
                 setCapturedPhotos(reorderedAndFilteredPhotos);
-                setCurrentStep('customize');
+                navigateToStep('customize');
               }}
-              onBack={() => setCurrentStep('review')}
+              onBack={goBack}
             />
           </motion.div>
         )}
@@ -209,9 +283,9 @@ const Index = () => {
               photos={capturedPhotos}
               onComplete={(filteredPhotos) => {
                 setCapturedPhotos(filteredPhotos);
-                setCurrentStep('customize');
+                navigateToStep('customize');
               }}
-              onBack={() => setCurrentStep('reorder')}
+              onBack={goBack}
             />
           </motion.div>
         )}
@@ -229,9 +303,9 @@ const Index = () => {
               photos={capturedPhotos}
               onComplete={(stripDataUrl) => {
                 setFinalStrip(stripDataUrl);
-                setCurrentStep('download');
+                navigateToStep('download');
               }}
-              onBack={() => setCurrentStep('reorder')}
+              onBack={goBack}
             />
           </motion.div>
         )}
@@ -255,5 +329,4 @@ const Index = () => {
     </div>
   );
 };
-
 export default Index;
