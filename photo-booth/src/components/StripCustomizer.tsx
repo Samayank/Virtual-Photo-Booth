@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Palette } from 'lucide-react';
+import { ArrowLeft, Download, Palette, Type } from 'lucide-react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { CapturedPhoto } from '../pages/Index';
 
 interface StripCustomizerProps {
@@ -30,11 +31,12 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
 }) => {
   const [selectedLayout, setSelectedLayout] = useState('vertical');
   const [selectedBackground, setSelectedBackground] = useState('white');
+  const [stripTitle, setStripTitle] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     generateStrip();
-  }, [selectedLayout, selectedBackground, photos]);
+  }, [selectedLayout, selectedBackground, photos, stripTitle]);
 
   const generateStrip = async () => {
     if (!canvasRef.current || photos.length === 0) return;
@@ -124,13 +126,22 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
         ctx.strokeRect(padding, y, imageWidth, imageHeight);
       });
 
-      // Add text at bottom
+      // Add custom title and date at bottom
       const textY = canvas.height - 50;
-      ctx.fillStyle = selectedBackground === 'white' ? '#666666' : '#ffffff';
-      ctx.font = '16px Inter, sans-serif';
+      const textColor = selectedBackground === 'white' ? '#333333' : '#ffffff';
+      ctx.fillStyle = textColor;
       ctx.textAlign = 'center';
-      ctx.fillText('BOOTHLY', canvas.width / 2, textY);
-      ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
+      
+      if (stripTitle.trim()) {
+        ctx.font = 'bold 18px Montserrat, Arial, sans-serif';
+        ctx.fillText(stripTitle.trim(), canvas.width / 2, textY);
+        ctx.font = '14px Inter, sans-serif';
+        ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
+      } else {
+        ctx.font = '16px Inter, sans-serif';
+        ctx.fillText('BOOTHLY', canvas.width / 2, textY);
+        ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
+      }
     } else if (selectedLayout === 'horizontal') {
       // Horizontal layout: place images side by side preserving aspect ratio
       const padding = 40;
@@ -154,6 +165,24 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
         ctx.lineWidth = 1;
         ctx.strokeRect(x, padding, imageWidth, imageHeight);
       });
+
+      // Add custom title and date at bottom right
+      const textX = canvas.width - padding;
+      const textY = canvas.height - 30;
+      const textColor = selectedBackground === 'white' ? '#333333' : '#ffffff';
+      ctx.fillStyle = textColor;
+      ctx.textAlign = 'right';
+      
+      if (stripTitle.trim()) {
+        ctx.font = 'bold 16px Montserrat, Arial, sans-serif';
+        ctx.fillText(stripTitle.trim(), textX, textY);
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillText(new Date().toLocaleDateString(), textX, textY + 20);
+      } else {
+        ctx.font = '14px Inter, sans-serif';
+        ctx.fillText('BOOTHLY', textX, textY);
+        ctx.fillText(new Date().toLocaleDateString(), textX, textY + 15);
+      }
     } else {
       // Grid layout - preserve aspect ratio with object-fit contain behavior
       const padding = 40;
@@ -197,6 +226,23 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
           ctx.strokeRect(pos.x, pos.y, cellSize, cellSize);
         }
       });
+
+      // Add custom title and date at bottom center
+      const textY = canvas.height - 30;
+      const textColor = selectedBackground === 'white' ? '#333333' : '#ffffff';
+      ctx.fillStyle = textColor;
+      ctx.textAlign = 'center';
+      
+      if (stripTitle.trim()) {
+        ctx.font = 'bold 18px Montserrat, Arial, sans-serif';
+        ctx.fillText(stripTitle.trim(), canvas.width / 2, textY);
+        ctx.font = '14px Inter, sans-serif';
+        ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 25);
+      } else {
+        ctx.font = '16px Inter, sans-serif';
+        ctx.fillText('BOOTHLY', canvas.width / 2, textY);
+        ctx.fillText(new Date().toLocaleDateString(), canvas.width / 2, textY + 20);
+      }
     }
 
     // Add outer border
@@ -261,7 +307,7 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
         </div>
 
         {/* Background options */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h3 className="font-semibold mb-3">Background</h3>
           <div className="grid grid-cols-4 gap-2">
             {backgroundColors.map((bg) => (
@@ -278,6 +324,25 @@ export const StripCustomizer: React.FC<StripCustomizerProps> = ({
               </Button>
             ))}
           </div>
+        </div>
+
+        {/* Strip title input */}
+        <div className="mb-8">
+          <h3 className="font-semibold mb-3 flex items-center">
+            <Type className="w-4 h-4 mr-2" />
+            Give your strip a name
+          </h3>
+          <Input
+            type="text"
+            placeholder="Enter a title (optional)"
+            value={stripTitle}
+            onChange={(e) => setStripTitle(e.target.value.slice(0, 30))}
+            maxLength={30}
+            className="btn-touch"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            {stripTitle.length}/30 characters
+          </p>
         </div>
 
         {/* Complete button */}

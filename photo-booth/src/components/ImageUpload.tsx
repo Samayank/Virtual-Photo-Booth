@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Upload, Camera, Image as ImageIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { CapturedPhoto } from '../pages/Index';
+import heic2any from 'heic2any';
 
 interface ImageUploadProps {
   onPhotosUploaded: (photos: CapturedPhoto[]) => void;
@@ -33,7 +34,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
     setIsUploading(true);
     const validFiles = files
-      .filter(file => file.type.startsWith('image/'))
+      .filter(file => file.type.startsWith('image/') || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif'))
       .slice(0, remainingSlots);
 
     const newPhotos: CapturedPhoto[] = [];
@@ -41,7 +42,26 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
     for (const file of validFiles) {
       try {
-        const dataUrl = await fileToDataUrl(file);
+        let processedFile = file;
+        
+        // Convert HEIC/HEIF to JPEG
+        if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif') {
+          try {
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.8
+            }) as Blob;
+            processedFile = new File([convertedBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+              type: 'image/jpeg'
+            });
+          } catch (heicError) {
+            console.error('Error converting HEIC file:', heicError);
+            continue; // Skip this file if conversion fails
+          }
+        }
+        
+        const dataUrl = await fileToDataUrl(processedFile);
         const photo: CapturedPhoto = {
           id: Date.now().toString() + Math.random(),
           dataUrl,
@@ -177,7 +197,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           multiple
           onChange={handleFileChange}
           className="hidden"

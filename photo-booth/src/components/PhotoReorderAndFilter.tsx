@@ -19,6 +19,7 @@ export const PhotoReorderAndFilter: React.FC<PhotoReorderAndFilterProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState<'reorder' | 'filter'>('reorder');
   const [reorderedPhotos, setReorderedPhotos] = useState<CapturedPhoto[]>(photos);
+  const [originalPhotos] = useState<CapturedPhoto[]>(photos.map(photo => ({ ...photo, filter: 'none' })));
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [isApplyingFilter, setIsApplyingFilter] = useState(false);
@@ -60,7 +61,34 @@ export const PhotoReorderAndFilter: React.FC<PhotoReorderAndFilterProps> = ({
 
     try {
       if (filterId === 'none') {
-        loadImageToCanvas();
+        // Reset to original image
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          
+          if (updatePhoto) {
+            const newDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const updatedPhotos = [...reorderedPhotos];
+            updatedPhotos[currentPhotoIndex] = {
+              ...currentPhoto,
+              dataUrl: newDataUrl,
+              filter: filterId
+            };
+            setReorderedPhotos(updatedPhotos);
+          }
+          setIsApplyingFilter(false);
+        };
+        // Use original photo data for 'none' filter
+        const originalPhoto = originalPhotos.find(p => p.id === currentPhoto.id);
+        img.src = originalPhoto?.dataUrl || currentPhoto.dataUrl;
+        return;
       } else {
         await camanFilterManager.applyFilter(canvasRef.current, filterId);
       }

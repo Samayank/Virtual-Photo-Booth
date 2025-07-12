@@ -80,12 +80,8 @@ const Index = () => {
   };
 
   const handleReviewComplete = () => {
-    // Route based on user choice
-    if (userChoice === 'camera') {
-      setCurrentStep('reorder'); // Filters already applied in camera
-    } else {
-      setCurrentStep('reorderAndFilter'); // Need both reorder and filters
-    }
+    // Both camera and upload photos go directly to reorder (no filters for uploads)
+    setCurrentStep('reorder');
   };
 
   const stepVariants = {
@@ -235,7 +231,7 @@ const Index = () => {
                 setFinalStrip(stripDataUrl);
                 setCurrentStep('download');
               }}
-              onBack={() => setCurrentStep('filters')}
+              onBack={() => setCurrentStep('reorder')}
             />
           </motion.div>
         )}

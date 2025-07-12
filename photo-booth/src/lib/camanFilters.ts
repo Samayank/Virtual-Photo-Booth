@@ -42,13 +42,6 @@ export const camanFilters: FilterConfig[] = [
     }
   },
   {
-    id: 'cool',
-    name: 'Cool',
-    apply: (caman) => {
-      caman.colorize('#0066ff', 10).vibrance(15).render();
-    }
-  },
-  {
     id: 'sepia',
     name: 'Sepia',
     apply: (caman) => {

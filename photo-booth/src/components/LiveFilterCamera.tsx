@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, RotateCcw, Zap, X } from 'lucide-react';
+import { Camera, RotateCcw, Zap, X, Timer } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { CountdownTimer } from './CountdownTimer';
@@ -37,6 +37,7 @@ export const LiveFilterCamera: React.FC<LiveFilterCameraProps> = ({
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState('none');
+  const [timerDuration, setTimerDuration] = useState(3);
 
   useEffect(() => {
     enumerateCameras();
@@ -157,7 +158,13 @@ export const LiveFilterCamera: React.FC<LiveFilterCameraProps> = ({
     if (!videoRef.current || !canvasRef.current || isCapturing) return;
 
     setIsCapturing(true);
-    setShowCountdown(true);
+    
+    if (timerDuration > 0) {
+      setShowCountdown(true);
+    } else {
+      // Capture immediately if timer is off
+      handleCountdownComplete();
+    }
   };
 
   const handleCountdownComplete = () => {
@@ -273,6 +280,20 @@ export const LiveFilterCamera: React.FC<LiveFilterCameraProps> = ({
             </span>
           </div>
           
+          {/* Timer selector */}
+          <Select value={timerDuration.toString()} onValueChange={(value) => setTimerDuration(parseInt(value))}>
+            <SelectTrigger className="glass-subtle border-white/20 text-white w-auto min-w-[80px]">
+              <Timer className="w-4 h-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-black/90 border-white/20">
+              <SelectItem value="0" className="text-white hover:bg-white/10 focus:bg-white/10">Off</SelectItem>
+              <SelectItem value="3" className="text-white hover:bg-white/10 focus:bg-white/10">3s</SelectItem>
+              <SelectItem value="5" className="text-white hover:bg-white/10 focus:bg-white/10">5s</SelectItem>
+              <SelectItem value="10" className="text-white hover:bg-white/10 focus:bg-white/10">10s</SelectItem>
+            </SelectContent>
+          </Select>
+          
           {facingMode === 'environment' && availableCameras.length > 1 && (
             <Select value={selectedCameraId} onValueChange={handleCameraChange}>
               <SelectTrigger className="glass-subtle border-white/20 text-white w-auto min-w-[100px]">
@@ -349,6 +370,7 @@ export const LiveFilterCamera: React.FC<LiveFilterCameraProps> = ({
       <AnimatePresence>
         {showCountdown && (
           <CountdownTimer
+            duration={timerDuration}
             onComplete={handleCountdownComplete}
             onCancel={() => {
               setShowCountdown(false);
